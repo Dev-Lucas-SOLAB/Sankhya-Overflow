@@ -115,22 +115,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
             setLoad(true);
 
-            await AsyncStorage.clear().then(() => {
-                setAuthData({
-                    callID: null,
-                    idusu: null,
-                    jsessionid: null,
-                    kID: null,
-                });
+            const jsessionid = await AsyncStorage.getItem('jsessionid');
 
-                setSigned(false);
+            await createApi().post('/mge/service.sbr?serviceName=MobileLoginSP.logout&outputType=json', {
+                serviceName: "MobileLoginSP.logout",
+                status: "status",
+                pendingPrinting: "false"
+            }, {
+                headers: {
+                    'Content-Type': 'application/json; charset=utf-8',
+                    'Cookie': jsessionid ? `JSESSIONID=${jsessionid}` : ''
+                }
+            }).then(async (rs) => {
+                await killSessionSankhya();
             })
-           
-
         } catch (error) {
             console.error(error);
         } finally {
             setLoad(false);
+        }
+    }
+
+
+    async function killSessionSankhya(){
+        try {
+
+            const jsessionid = await AsyncStorage.getItem('jsessionid');
+
+            await createApi().post('/mge/service.sbr?serviceName=SessionManagerSP.killSession&application=IntegradorBV&resourceID=br.com.sankhya.core.cfg.AdministracaoServidor&outputType=json', {
+                headers: {
+                    'Content-Type': 'application/json; charset=utf-8',
+                    'Cookie': jsessionid ? `JSESSIONID=${jsessionid}` : ''
+                }
+            }).then(() => {
+                 AsyncStorage.clear().then(() => {
+                    setAuthData({
+                        callID: null,
+                        idusu: null,
+                        jsessionid: null,
+                        kID: null,
+                    });
+
+                    setSigned(false);
+                })
+            })
+            
+        } catch (error) {
+             console.error(error);
         }
     }
 
